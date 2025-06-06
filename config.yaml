@@ -1,0 +1,231 @@
+# =============================================================================
+# config.yaml - Файл конфигурации для Arbitrage Engine
+# =============================================================================
+# Этот файл содержит настройки для различных компонентов приложения.
+# Используется для загрузки параметров при запуске.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Настройки Логирования (Использует github.com/sirupsen/logrus)
+# Эти настройки используются для инициализации центрального логгера приложения.
+# -----------------------------------------------------------------------------
+log:
+  level: "trace"         # Уровень логирования: trace, debug, info, warn, error, fatal, panic
+                        # Рекомендуется "info" для продакшена, "debug" или "trace" для отладки.
+  file_path: "./logs/app.log"         # Полный путь к файлу логов. Если пусто (""), логи будут писаться только в stderr.
+                        # Пример: "/var/log/arbitrage-engine/app.log" или "./app.log"
+  max_size: 10          # Максимальный размер файла лога в мегабайтах перед ротацией (используется Lumberjack).
+  max_backups: 5        # Максимальное количество старых файлов лога для хранения (после ротации).
+  max_age: 30           # Максимальное количество дней для хранения файла лога (после ротации).
+  compress: false       # Сжимать ли старые файлы лога при ротации (добавляет .gz). true/false.
+  # format: "text"    # Этот параметр не используется текущей реализацией InitLogger (хардкод TextFormatter).
+  # output: "stderr"  # Этот параметр не используется текущей реализацией InitLogger (хардкод stderr + file_path).
+
+# -----------------------------------------------------------------------------
+# Настройки Redis
+# Используются для подключения к Redis серверу, который хранит стаканы и BBO.
+# -----------------------------------------------------------------------------
+redis:
+  addr: "localhost:6379" # Адрес и порт Redis сервера. Используйте localhost, если Redis запущен в том же окружении (WSL).
+  password: ""           # Пароль для Redis. Если нет пароля, оставьте пустым ("").
+  db: 0                  # Номер базы данных Redis для использования (0-15).
+
+# -----------------------------------------------------------------------------
+# Настройки Базы Данных PostgreSQL
+# Используются для подключения к БД, хранящей информацию о маркетах, сетях, комиссиях и т.д.
+# -----------------------------------------------------------------------------
+database:
+  # ВАЖНО: Если запускаете из WSL, а БД на хостовой Windows, используйте IP хоста из WSL.
+  # Найдите его командой `cat /etc/resolv.conf` в WSL (это `nameserver` адрес).
+  host: "172.29.208.1" # Пример: "172.29.208.1"
+  port: 5432              # Порт PostgreSQL. Стандартно 5432.
+  dbname: "arbitrage_db"  # Имя базы данных.
+  user: "igor"            # Имя пользователя БД.
+  password: "Rarunu34!" # Пароль пользователя БД.
+  sslmode: "disable"      # Режим SSL. Используйте "disable" для локальных подключений без SSL.
+                          # Возможные значения: require, verify-ca, verify-full.
+
+# -----------------------------------------------------------------------------
+# Настройки Размеров Буферов Каналов
+# Определяют емкость внутренних каналов обмена данными между компонентами.
+# -----------------------------------------------------------------------------
+channels:
+  order_book_buffer_size: 2000 # Буфер для сообщений полного стакана (может быть большим)
+  bbo_buffer_size: 2000        # Буфер для сообщений BBO (может быть большим)
+  resync_command_buffer_size: 20 # Буфер для команд ресинка (не должен быть очень большим)
+  subscription_command_buffer_size: 20 # Буфер для команд управления подписками
+
+# -----------------------------------------------------------------------------
+# Настройки Менеджера Подписок
+# Определяют поведение компонента SubscriptionManager.
+# -----------------------------------------------------------------------------
+subscription_manager:
+  enabled: true
+  default_subscriptions:
+    # Пример подписок для Binance Spot:
+    - source: "binance"
+      market_type: "spot"
+      type: "subscribe_depth"
+      symbol: "BTCUSDT"
+      symbol: "ETHUSDT"
+      depth: 0
+    - source: "binance"
+      market_type: "spot"
+      type: "subscribe_bbo"
+      symbol: "BTCUSDT"
+      symbol: "ETHUSDT"
+  
+    # Пример подписок для Binance Futures:
+    - source: "binance"
+      market_type: "linear_futures"
+      type: "subscribe_depth"
+      symbol: "BTCUSDT"
+      symbol: "ETHUSDT"
+      depth: 0 
+    - source: "binance"
+      market_type: "linear_futures"
+      type: "subscribe_bbo"
+      symbol: "BTCUSDT"
+      symbol: "ETHUSDT"
+
+    # Пример подписок для Bybit Futures:
+    - source: "bybit"
+      market_type: "linear_futures"
+      type: "subscribe_depth"
+      symbol: "BTCUSDT"
+      symbol: "ETHUSDT"
+      depth: 50
+    - source: "bybit"
+      market_type: "linear_futures"
+      type: "subscribe_bbo"
+      symbol: "BTCUSDT"
+      symbol: "ETHUSDT"
+    # Пример подписок для Bybit spot:
+    - source: "bybit"
+      market_type: "spot"
+      type: "subscribe_depth"
+      symbol: "BTCUSDT"
+      symbol: "ETHUSDT"
+      depth: 50
+    - source: "bybit"
+      market_type: "spot"
+      type: "subscribe_bbo"
+      symbol: "BTCUSDT"
+      symbol: "ETHUSDT"
+    # TODO: Добавить подписки для других символов и типов маркетов по необходимости
+
+# -----------------------------------------------------------------------------
+# Настройки Бирж
+# Конфигурация для каждого клиента биржи.
+# -----------------------------------------------------------------------------
+exchanges:
+  binance:
+    enabled: true          # Включить клиент Binance (для любых рынков)?
+    api_key: "YOUR_BINANCE_API_KEY" # Ваш API Key (общий для Spot/Futures, если не указано иное)
+    api_secret: "YOUR_BINANCE_API_SECRET" # Ваш API Secret
+    spot: # Настройки для спотового рынка
+      enabled: true
+      ws_base_url: "wss://stream.binance.com:9443/stream" # Базовый URL для Spot WebSocket
+      rest_base_url: "https://api.binance.com"       # Базовый URL для Spot REST API
+      tracked_symbols:
+      - "BTCUSDT"
+      - "ETHUSDT"
+      # WS лимиты для спота (нужно проверить документацию)
+      ws_max_topics_per_subscribe: 200 # Binance: max 200 topics per connection, group in batches
+      ws_send_message_rate_limit_per_sec: 5 # Binance Spot (old streams): 5 msgs/sec. New streams / Combined streams have 10/sec. Check which one applies.
+
+    futures: # Настройки для фьючерсного рынка (USD-M Linear)
+      enabled: true
+      ws_base_url: "wss://fstream.binance.com/stream" # Базовый URL для Futures WebSocket (USD-M)
+      rest_base_url: "https://fapi.binance.com"       # Базовый URL для Futures REST API (USD-M)
+      tracked_symbols:
+      - "BTCUSDT"
+      - "ETHUSDT"
+      # WS лимиты для фьючерсов (нужно проверить документацию)
+      ws_max_topics_per_subscribe: 200 # Binance Futures: max 200 topics per connection
+      ws_send_message_rate_limit_per_sec: 10 # Binance Futures: 10 msgs/sec
+
+  bybit:
+    enabled: false          # Включить клиент Bybit (для любых рынков)?
+    api_key: "YOUR_BYBIT_API_KEY" # Ваш API Key
+    api_secret: "YOUR_BYBIT_API_SECRET" # Ваш API Secret
+    # Внимание: Bybit V5 использует разные WS URLs для разных типов рынка
+    spot: # Настройки для спотового рынка Bybit (если поддерживаете)
+      enabled: true # По умолчанию отключено, если не реализуете
+      ws_base_url: "wss://stream.bybit.com/v5/public/spot" # Пример Spot V5 URL
+      rest_base_url: "https://api.bybit.com/v5" # Пример Spot V5 REST URL
+      tracked_symbols:
+      - "BTCUSDT"
+      - "ETHUSDT"
+      ws_max_topics_per_subscribe: 10 # Bybit V5: limit in 'args' array? Check docs! Often much lower than Binance.
+      ws_send_message_rate_limit_per_sec: 10 # Bybit V5: 10 msgs/sec limit
+    futures: # Настройки для фьючерсного рынка Bybit (V5 Linear)
+      enabled: true
+      ws_base_url: "wss://stream.bybit.com/v5/public/linear" # Базовый URL для Linear Futures V5
+      rest_base_url: "https://api.bybit.com/v5"       # Пример Linear Futures V5 REST URL
+      tracked_symbols:
+      - "BTCUSDT"
+      - "ETHUSDT"
+      ws_max_topics_per_subscribe: 10 # Bybit V5: limit in 'args' array? Check docs! Often much lower than Binance.
+      ws_send_message_rate_limit_per_sec: 10 # Bybit V5: 10 msgs/sec limit
+
+  # Добавьте конфигурацию для других бирж или типов рынков (напр., binance.coin_futures)
+
+# -----------------------------------------------------------------------------
+# Настройки Scanner'а
+# Определяют поведение компонента Scanner.
+# -----------------------------------------------------------------------------
+scanner:
+  # Список символов для отслеживания (глобальный список).
+  # TODO: Этот список должен быть генерирован при старте на основе БД и фильтров, а не хардкожен.
+  # Временный список для инициализации метаданных Scanner'а.
+  # ВАЖНО: Убедитесь, что эти символы соответствуют символам в default_subscriptions
+  # ИЛИ обновите логику Scanner'а, чтобы он брал символы из active_subscriptions или БД.
+  tracked_symbols:
+    - "BTCUSDT"
+    - "ETHUSDT"
+    - "AVAXUSDT"
+    - "BNBUSDT"
+    - "SOLUSDT"
+    # Добавьте все символы, которые должны попадать в Scanner из каналов бирж
+
+# -----------------------------------------------------------------------------
+# Настройки Arbitrage Analyzer
+# Определяют поведение компонента, ищущего арбитражные возможности.
+# -----------------------------------------------------------------------------
+arbitrage_analyzer:
+  enabled: true          # Включить Arbitrage Analyzer? (true/false)
+  symbols:               # Список символов для поиска арбитража (глобальный список)
+    - "BTCUSDT"
+    - "ETHUSDT"
+    # TODO: Этот список должен быть генерирован на основе БД и фильтров.
+    # Для начала можно ограничиться небольшим списком для тестирования
+  exchanges:             # Список бирж/типов рынков для анализа (формат "биржа:тип_рынка")
+    - "binance:spot"
+    - "binance:linear_futures"
+    - "bybit:linear_futures"
+    - "bybit:spot" # Добавьте спотовый рынок Bybit, если он включен выше
+  check_interval: "500ms" # Интервал между проверками арбитражных возможностей. Используйте форматы Go Duration string.
+
+# -----------------------------------------------------------------------------
+# Настройки Веб-сервера
+# Конфигурация встроенного веб-сервера для мониторинга.
+# -----------------------------------------------------------------------------
+web:
+  enabled: true          # Включить веб-сервер? (true/false)
+  listen_addr: ":8080"   # Адрес и порт, на котором будет слушать веб-сервер.
+  # TODO: Добавить список символов/типов рынков для отображения на веб
+
+# -----------------------------------------------------------------------------
+# Настройки Rate Limits Manager (Если используется централизованный менеджер)
+# Определяют лимиты запросов к REST API для разных бирж/типов запросов.
+# Эти значения используются RateLimiterManager.
+# -----------------------------------------------------------------------------
+rate_limits:
+  binance_rest_per_min: 1200 # Максимальный вес REST запросов в минуту для Binance (может быть общим для Spot/Futures)
+  bybit_rest_per_min: 1200   # Максимальный вес REST запросов в минуту для Bybit (может быть общим)
+  # TODO: Добавьте лимиты для других бирж или типов запросов (напр., приватные запросы)
+
+# =============================================================================
+# Конец файла config.yaml
+# =============================================================================
