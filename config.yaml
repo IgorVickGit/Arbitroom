@@ -40,8 +40,8 @@ database:
   host: "172.29.208.1" # Пример: "172.29.208.1"
   port: 5432              # Порт PostgreSQL. Стандартно 5432.
   dbname: "arbitrage_db"  # Имя базы данных.
-  user: "igor"            # Имя пользователя БД.
-  password: "Rarunu34!" # Пароль пользователя БД.
+  user: <user>            # Имя пользователя БД.
+  password: <psaaword> # Пароль пользователя БД.
   sslmode: "disable"      # Режим SSL. Используйте "disable" для локальных подключений без SSL.
                           # Возможные значения: require, verify-ca, verify-full.
 
